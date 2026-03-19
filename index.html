@@ -13,9 +13,7 @@
       align-items: center;
       padding: 20px;
     }
-    h2 {
-      text-shadow: 1px 1px 5px #000;
-    }
+    h2 { text-shadow: 1px 1px 5px #000; }
     input {
       padding: 10px;
       border-radius: 5px;
@@ -33,9 +31,7 @@
       font-weight: bold;
       transition: 0.3s;
     }
-    button:hover {
-      background-color: #f50057;
-    }
+    button:hover { background-color: #f50057; }
     ul {
       list-style: none;
       padding: 0;
@@ -50,21 +46,17 @@
       border-radius: 8px;
       word-wrap: break-word;
     }
-    .disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+    .disabled { opacity: 0.5; cursor: not-allowed; }
   </style>
 </head>
 <body>
   <h2>DRIVERS</h2>
   <input id="username" placeholder="Your name"><br>
   <input id="message" placeholder="Optional message"><br>
-  <button id="sendBtn" onclick="sendMessage()" class="disabled" disabled>Send </button>
+  <button id="sendBtn" class="disabled" disabled>Send</button>
 
   <ul id="messages"></ul>
 
-  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
@@ -73,6 +65,7 @@
     const firebaseConfig = {
       apiKey: "AIzaSyC4RwUjxX9x118vXdlfr6UEZGC0rwL6-HE",
       authDomain: "chat-1cb54.firebaseapp.com",
+      databaseURL: "https://chat-1cb54-default-rtdb.firebaseio.com/",
       projectId: "chat-1cb54",
       storageBucket: "chat-1cb54.firebasestorage.app",
       messagingSenderId: "353414353280",
@@ -81,12 +74,16 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
+    getAnalytics(app);
+
     const db = getDatabase(app);
     const messagesRef = ref(db, 'messages');
 
     let currentAddress = null;
     const sendBtn = document.getElementById('sendBtn');
+
+    // FIX: attach click AFTER module loads
+    sendBtn.addEventListener('click', sendMessage);
 
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(position => {
@@ -112,24 +109,24 @@
         sendBtn.disabled = true;
         sendBtn.classList.add('disabled');
       });
-    } else {
-      alert("Geolocation not supported.");
     }
 
     function sendMessage() {
-      const user = document.getElementById("username").value;
-      const msg = document.getElementById("message").value;
+      const user = document.getElementById("username").value.trim();
+      const msg = document.getElementById("message").value.trim();
 
       if (!user) { alert("Enter your name"); return; }
-      if (!currentAddress) { alert("Cannot send message without location."); return; }
+      if (!currentAddress) { alert("Location not ready yet"); return; }
 
       push(messagesRef, {
         name: user,
         message: msg,
         location: currentAddress
+      }).then(() => {
+        document.getElementById("message").value = "";
+      }).catch(err => {
+        alert("Error sending: " + err);
       });
-
-      document.getElementById("message").value = "";
     }
 
     onChildAdded(messagesRef, snapshot => {
