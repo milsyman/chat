@@ -14,38 +14,11 @@
       padding: 20px;
     }
     h2 { text-shadow: 1px 1px 5px #000; }
-    input {
-      padding: 10px;
-      border-radius: 5px;
-      border: none;
-      margin: 5px 0;
-      width: 250px;
-    }
-    button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 5px;
-      background-color: #ff4081;
-      color: white;
-      cursor: pointer;
-      font-weight: bold;
-      transition: 0.3s;
-    }
+    input { padding: 10px; border-radius: 5px; border: none; margin: 5px 0; width: 250px; }
+    button { padding: 10px 20px; border: none; border-radius: 5px; background-color: #ff4081; color: white; cursor: pointer; font-weight: bold; transition: 0.3s; }
     button:hover { background-color: #f50057; }
-    ul {
-      list-style: none;
-      padding: 0;
-      width: 100%;
-      max-width: 500px;
-      margin-top: 20px;
-    }
-    li {
-      background: rgba(0,0,0,0.3);
-      padding: 10px;
-      margin: 5px 0;
-      border-radius: 8px;
-      word-wrap: break-word;
-    }
+    ul { list-style: none; padding: 0; width: 100%; max-width: 500px; margin-top: 20px; }
+    li { background: rgba(0,0,0,0.3); padding: 10px; margin: 5px 0; border-radius: 8px; word-wrap: break-word; }
     .disabled { opacity: 0.5; cursor: not-allowed; }
   </style>
 </head>
@@ -59,7 +32,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js";
 
     const firebaseConfig = {
@@ -81,9 +54,6 @@
 
     let currentAddress = null;
     const sendBtn = document.getElementById('sendBtn');
-
-    // FIX: attach click AFTER module loads
-    sendBtn.addEventListener('click', sendMessage);
 
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(position => {
@@ -111,12 +81,12 @@
       });
     }
 
-    function sendMessage() {
+    sendBtn.addEventListener('click', () => {
       const user = document.getElementById("username").value.trim();
       const msg = document.getElementById("message").value.trim();
 
       if (!user) { alert("Enter your name"); return; }
-      if (!currentAddress) { alert("Location not ready yet"); return; }
+      if (!currentAddress) { alert("Location not ready"); return; }
 
       push(messagesRef, {
         name: user,
@@ -127,18 +97,21 @@
       }).catch(err => {
         alert("Error sending: " + err);
       });
-    }
+    });
 
-    onChildAdded(messagesRef, snapshot => {
-      const data = snapshot.val();
-      const li = document.createElement("li");
-
-      let text = data.name + ": ";
-      if (data.message) text += data.message + " | ";
-      if (data.location) text += "📍 " + data.location;
-
-      li.textContent = text;
-      document.getElementById("messages").appendChild(li);
+    // Listen for new messages
+    onValue(messagesRef, snapshot => {
+      const list = document.getElementById("messages");
+      list.innerHTML = '';
+      snapshot.forEach(child => {
+        const data = child.val();
+        const li = document.createElement("li");
+        let text = data.name + ": ";
+        if(data.message) text += data.message + " | ";
+        if(data.location) text += "📍 " + data.location;
+        li.textContent = text;
+        list.appendChild(li);
+      });
     });
   </script>
 </body>
