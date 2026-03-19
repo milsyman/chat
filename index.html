@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>M&S CHAT</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #6a11cb, #2575fc);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    h2 {
+      text-shadow: 1px 1px 5px #000;
+    }
+    input {
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      margin: 5px 0;
+      width: 250px;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      background-color: #ff4081;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+    button:hover {
+      background-color: #f50057;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      width: 100%;
+      max-width: 500px;
+      margin-top: 20px;
+    }
+    li {
+      background: rgba(0,0,0,0.3);
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 8px;
+      word-wrap: break-word;
+    }
+    .disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <h2>DRIVERS</h2>
+  <input id="username" placeholder="Your name"><br>
+  <input id="message" placeholder="Optional message"><br>
+  <button id="sendBtn" onclick="sendMessage()" class="disabled" disabled>Send </button>
+
+  <ul id="messages"></ul>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC4RwUjxX9x118vXdlfr6UEZGC0rwL6-HE",
+      authDomain: "chat-1cb54.firebaseapp.com",
+      projectId: "chat-1cb54",
+      storageBucket: "chat-1cb54.firebasestorage.app",
+      messagingSenderId: "353414353280",
+      appId: "1:353414353280:web:e1c5c865ce0abfd9c0b165",
+      measurementId: "G-1CNP83WJKZ"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getDatabase(app);
+    const messagesRef = ref(db, 'messages');
+
+    let currentAddress = null;
+    const sendBtn = document.getElementById('sendBtn');
+
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(position => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+          .then(res => res.json())
+          .then(data => {
+            currentAddress = data.display_name || null;
+            if(currentAddress){
+              sendBtn.disabled = false;
+              sendBtn.classList.remove('disabled');
+            }
+          })
+          .catch(() => {
+            currentAddress = null;
+            sendBtn.disabled = true;
+            sendBtn.classList.add('disabled');
+          });
+      }, () => {
+        alert("Location permission is required to post messages.");
+        sendBtn.disabled = true;
+        sendBtn.classList.add('disabled');
+      });
+    } else {
+      alert("Geolocation not supported.");
+    }
+
+    function sendMessage() {
+      const user = document.getElementById("username").value;
+      const msg = document.getElementById("message").value;
+
+      if (!user) { alert("Enter your name"); return; }
+      if (!currentAddress) { alert("Cannot send message without location."); return; }
+
+      push(messagesRef, {
+        name: user,
+        message: msg,
+        location: currentAddress
+      });
+
+      document.getElementById("message").value = "";
+    }
+
+    onChildAdded(messagesRef, snapshot => {
+      const data = snapshot.val();
+      const li = document.createElement("li");
+
+      let text = data.name + ": ";
+      if (data.message) text += data.message + " | ";
+      if (data.location) text += "📍 " + data.location;
+
+      li.textContent = text;
+      document.getElementById("messages").appendChild(li);
+    });
+  </script>
+</body>
+</html>
