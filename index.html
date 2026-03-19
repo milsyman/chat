@@ -24,8 +24,7 @@
 </head>
 <body>
   <h2>DRIVERS</h2>
-  <input id="username" placeholder="Your name"><br>
-  <input id="message" placeholder="Optional message"><br>
+  <input id="message" placeholder="Type your message"><br>
   <button id="sendBtn" class="disabled" disabled>Send</button>
 
   <ul id="messages"></ul>
@@ -54,7 +53,6 @@
     let currentAddress = null;
     const sendBtn = document.getElementById('sendBtn');
 
-    // Enable button after location is ready
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(position => {
         const lat = position.coords.latitude;
@@ -82,15 +80,10 @@
     }
 
     sendBtn.addEventListener('click', () => {
-      const user = document.getElementById("username").value.trim();
       const msg = document.getElementById("message").value.trim();
-
-      if (!user) { alert("Enter your name"); return; }
       if (!currentAddress) { alert("Location not ready"); return; }
 
-      // Correct push to Firebase Realtime Database
       push(messagesRef, {
-        name: user,
         message: msg,
         location: currentAddress
       }).then(() => {
@@ -102,11 +95,10 @@
       });
     });
 
-    // Listen for new messages
     onChildAdded(messagesRef, snapshot => {
       const data = snapshot.val();
       const li = document.createElement("li");
-      let text = data.name + ": ";
+      let text = "";
       if(data.message) text += data.message + " | ";
       if(data.location) text += "📍 " + data.location;
       li.textContent = text;
