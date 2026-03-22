@@ -20,14 +20,22 @@
     ul { list-style: none; padding: 0; width: 100%; max-width: 500px; margin-top: 20px; }
     li { background: rgba(0,0,0,0.3); padding: 10px; margin: 5px 0; border-radius: 8px; word-wrap: break-word; }
     .disabled { opacity: 0.5; cursor: not-allowed; }
+    #chatContainer { display: none; flex-direction: column; align-items: center; width: 100%; }
   </style>
 </head>
 <body>
   <h2>DRIVERS CHAT</h2>
-  <input id="message" placeholder="Type your message here"><br>
-  <button id="sendBtn" class="disabled" disabled>Send</button>
 
-  <ul id="messages"></ul>
+  <!-- PIN input -->
+  <input id="pinInput" placeholder="Enter PIN to access chat">
+  <button id="pinBtn">Enter</button>
+
+  <!-- Chat container (hidden initially) -->
+  <div id="chatContainer">
+    <input id="message" placeholder="Type your message here" disabled><br>
+    <button id="sendBtn" class="disabled" disabled>Send</button>
+    <ul id="messages"></ul>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
@@ -50,10 +58,34 @@
     const db = getDatabase(app);
     const messagesRef = ref(db, 'messages');
 
-    let currentAddress = null;
-    const sendBtn = document.getElementById('sendBtn');
+    const pinInput = document.getElementById("pinInput");
+    const pinBtn = document.getElementById("pinBtn");
+    const chatContainer = document.getElementById("chatContainer");
+    const messageInput = document.getElementById("message");
+    const sendBtn = document.getElementById("sendBtn");
 
-    if (navigator.geolocation) {
+    let currentAddress = null;
+    const CORRECT_PIN = "21196";
+
+    // PIN verification
+    pinBtn.addEventListener('click', () => {
+      if(pinInput.value === CORRECT_PIN){
+        alert("PIN correct! Access granted.");
+        pinInput.style.display = "none";
+        pinBtn.style.display = "none";
+        chatContainer.style.display = "flex";
+        messageInput.disabled = false;
+        if(currentAddress){
+          sendBtn.disabled = false;
+          sendBtn.classList.remove('disabled');
+        }
+      } else {
+        alert("Incorrect PIN. Access denied.");
+      }
+    });
+
+    // Geolocation
+    if(navigator.geolocation){
       navigator.geolocation.watchPosition(position => {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
@@ -62,7 +94,7 @@
           .then(res => res.json())
           .then(data => {
             currentAddress = data.display_name || null;
-            if(currentAddress){
+            if(currentAddress && messageInput.disabled === false){
               sendBtn.disabled = false;
               sendBtn.classList.remove('disabled');
             }
@@ -79,22 +111,24 @@
       });
     }
 
+    // Send message
     sendBtn.addEventListener('click', () => {
-      const msg = document.getElementById("message").value.trim();
-      if (!currentAddress) { alert("Location not ready"); return; }
+      const msg = messageInput.value.trim();
+      if(!currentAddress){ alert("Location not ready"); return; }
+      if(!msg){ alert("Cannot send empty message"); return; }
 
       push(messagesRef, {
         message: msg,
         location: currentAddress
       }).then(() => {
-        document.getElementById("message").value = "";
-        console.log("Message sent successfully.");
+        messageInput.value = "";
       }).catch(err => {
         console.error("Error sending message:", err);
         alert("Failed to send message. Check console.");
       });
     });
 
+    // Listen for messages
     onChildAdded(messagesRef, snapshot => {
       const data = snapshot.val();
       const li = document.createElement("li");
